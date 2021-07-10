@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% set active_page = "index" %}
+
+{% block header %}
+    {% block title %}News A.I. Choose{% endblock %}
+{% endblock %}
+{% block content %}
+<div class="text-center">
+    <form action="{{ url_for('index') }}">
+        <button class="btn btn-primary btn-lg" type="submit">Get Started</button>
+    </form>
+</div>
+{% endblock %}
