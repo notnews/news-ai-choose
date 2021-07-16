@@ -1,7 +1,11 @@
+import json
 import os
+
+from flask import Flask, render_template, jsonify, request
+import requests
+
 from . import models
 from . import db_utils
-from flask import Flask, render_template
 
 
 def create_app(test_config=None):
@@ -27,7 +31,15 @@ def create_app(test_config=None):
 
     @app.route("/")
     def index():
-        return render_template("index.html")
+        data = requests.get(request.url_root + "/articles").json()
+        articles = data["article_list"]["results"]
+        return render_template("index.html", articles=articles)
+
+    @app.route("/articles")
+    def articles():
+        with open("dummy_data.json") as test_data:
+            data = json.loads(test_data.read())
+        return jsonify(data)
     
     db = models.db
     db.app = app
