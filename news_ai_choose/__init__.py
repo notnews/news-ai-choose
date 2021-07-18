@@ -29,17 +29,15 @@ def create_app(test_config=None):
     except OSError:
         pass
 
-    @app.route("/")
+    @app.route("/", methods=["GET", "POST"])
     def index():
-        data = requests.get(request.url_root + "/articles").json()
-        articles = data["article_list"]["results"]
-        return render_template("index.html", articles=articles)
+        return render_template("index.html")
 
-    @app.route("/articles")
+    @app.route("/articles", methods=["GET", "POST"])
     def articles():
-        with open("dummy_data.json") as test_data:
-            data = json.loads(test_data.read())
-        return jsonify(data)
+        filtered_articles = models.News.query.filter_by(**request.json).all()
+        to_json = [r.serialize() for r in filtered_articles]
+        return jsonify(to_json)
     
     db = models.db
     db.app = app
@@ -47,6 +45,8 @@ def create_app(test_config=None):
 
     if os.getenv("FLASK_ENV") == "development":
         # simplifying a test db for local dev
+        db.drop_all()
         db_utils.init_db()
+        db_utils.populate_with_dev_data()
 
     return app
