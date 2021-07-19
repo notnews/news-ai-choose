@@ -6,19 +6,10 @@
 {% endblock %}
 {% block content %}
 <!-- slider for choosing article tone -->
-
-<div class="row row-cols-1 row-cols-md-2 g-4">
 <label for="customRange2" class="form-label text-center">Choose Article Tone</label>
-<input type="range" class="form-range text-center" min="0" max="2" id="customRange2" style="width: 15em;">
-{% for art in articles %}
-    <div class="card" style="width: 18rem;">
-        <img src="{{ art.small_image_url }}" class="card-img-top" alt="...">
-        <div class="card-body">
-        <h5 class="card-title">{{ art.title }}</h5>
-        <p class="card-text">{{ art.body }}</p>
-        <a href="{{ art.url }}" class="btn btn-primary">Go to article</a>
-        </div>
-    </div>
-{% endfor %}
+<input type="range" class="form-range text-center" min="0" max="2" id="slider-sentiment" style="width: 15em;" name="positivity">
+<!-- This gets populated by cards.js -->
+<div id="card-parent" class="row row-cols-1 row-cols-md-2 g-4">
 </div>
+<script src="{{ url_for('static', filename='cards.js') }}"></script>
 {% endblock %}
