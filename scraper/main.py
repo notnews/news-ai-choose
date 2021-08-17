@@ -3,7 +3,6 @@ Utility script for fetching top news articles from RSS feeds.
 """
 
 import json
-import re
 import subprocess
 import datetime
 import feedparser
