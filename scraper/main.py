@@ -19,7 +19,7 @@ def upload_to_s3():
     """recursively copy data from the /app/data directory to s3://news-you-choose/2021/08/16/ date partitioned key"""
     date_string = datetime.datetime.now().strftime("%Y/%m/%d")
     subprocess.run(["aws", "s3", "cp", "/app/json_data/",
-                    f"s3://news-you-choose/{date_string}/", "--recursive", "--profile", "fourthbrain"])
+                    f"s3://news-you-choose/{date_string}/", "--recursive"])
 
 
 def clean_text(article_text):
