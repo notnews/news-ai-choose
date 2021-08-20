@@ -3,7 +3,7 @@ Utility script for fetching top news articles from RSS feeds.
 """
 
 import json
-import subprocess
+import boto3
 import datetime
 import feedparser
 from newspaper import Article
@@ -14,12 +14,20 @@ SOURCES = {
     "fox": "http://feeds.foxnews.com/foxnews/latest"
 }
 
+DATA_DIR = "/tmp/json_data"
 
-def upload_to_s3():
-    """recursively copy data from the /app/data directory to s3://news-you-choose/2021/08/16/ date partitioned key"""
+
+def upload_to_s3(data, source):
+    """copy data from the /tmp/json_data directory to s3://news-you-choose/2021/08/16/ date partitioned key"""
     date_string = datetime.datetime.now().strftime("%Y/%m/%d")
-    subprocess.run(["aws", "s3", "cp", "/app/json_data/",
-                    f"s3://news-you-choose/{date_string}/", "--recursive"])
+    client = boto3.client('s3')
+    client.put_object(
+        Bucket='news-you-choose',
+        Key=f"{date_string}/{source}.json",
+        Body=json.dumps(data),
+        ContentType='application/json'
+    )
+    return
 
 
 def clean_text(article_text):
@@ -57,7 +65,8 @@ def article_to_json(article_rss, article_body):
     }
 
 
-if __name__ == "__main__":
+def handler(event, context):
+    """main function to scrape and upload to s3"""
     for source, rss_link in SOURCES.items():
         data = {"data": []}
         articles = get_articles_from_rss(rss_link)
@@ -70,6 +79,5 @@ if __name__ == "__main__":
             article_body_cleaned = clean_text(article_body)
             article_json = article_to_json(article_rss, article_body_cleaned)
             data["data"].append(article_json)
-        json.dump(data, open(
-            f"/app/json_data/{source}.json", "w"), ensure_ascii=False)
-    upload_to_s3()
+        upload_to_s3(data, source)
+    return "Done!"
