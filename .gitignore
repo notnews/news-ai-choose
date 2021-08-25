@@ -1,5 +1,6 @@
 # news_ai_choose
 news_ai_choose.db
+json_data/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

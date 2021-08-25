@@ -1,35 +1,22 @@
 # News A.I. Choose
+
 The goal of New A.I. Choose is to train machine learning models to accurately predict the category of a news article based on the article body and other context clues. Additionally, this project intends to provide a front-end web interface for users to interact with stories by requesting more positive or more negative new stories. Users will also be able to assist the model by verifying if the recommendation is accurate - this will be used in future training to fine tune the models.
 
-# Development
-set up and activate virtual environment, install requirements
-```shell
-$ python3 -m venv env
-$ source env/bin/activate
-$ pip install -r requirements.txt
-```
+# ECR, Lambda and Deployments
 
-start a local dev session by running `./local_dev.sh`. The database is currently populated by the test data stored in the file `dummy_data.json` which is a the result of a curl request to the nyt article api.
+We are using ECR along with a lambda function to run some web scraping tasks for this project. Read a quick [tutorial on this here](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/).
 
-If this is your first time running the shell script you may need to `chmod +x local_dev.sh`
+## ECR repositories:
 
+- `news-you-choose`
+  - Contains the scraper for daily news articles
+  - Used in Lambda function `news-you-choose-daily-scraper`
 
-## Article API
-Example of curl for getting articles based on some query parameter. All columns in models.News are able to be used in this JSON filter.
-```shell
-$ curl -X POST http://127.0.0.1:5000//articles --data '{"positivity": 1}' -H "Accept: application/json" -H "Content-Type: application/json"
-```
-Gets you the following structure:
+## Deployment to Lambda
 
-```json
-[
-  {
-    "category": 4, 
-    "content": "CIMARRON, Kan. -- The ubiquitous swerving and darting forms making their hopscotch journey across the landscape here in recent days are part of one of the most storied -- and least celebrated -- natural migrations on the Great Plains. Yes, the tumbleweeds are on the move again. Over the coming weeks, more and more of these vagabond bundles of", 
-    "created_at": "2021-07-18 21:28:50", 
-    "id": 2, 
-    "positivity": 1, 
-    "title": "Drifting Along, Tumbleweeds Are Piling Up Across Plains", 
-    "updated_at": "2021-07-18 21:28:50"
-  }, // cutoff for brevity 
-```
+Deployments to Lambda are currently manual, while we research how to do this manually.
+
+1. alter the files in `scraper/` directory
+   - Note that you can test this locally as described in the [tutorial](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/).
+2. run `make latest` to login, build and push the latest version of the image to the ECR repository as `news-you-choose:latest`
+3. Go to the Lambda function on the aws console -> click `Image` -> `Deploy New Image` -> click `Browse Images` and choose the image with the `latest` tag
