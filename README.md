@@ -2,6 +2,12 @@
 
 The goal of New A.I. Choose is to train machine learning models to accurately predict the category of a news article based on the article body and other context clues. Additionally, this project intends to provide a front-end web interface for users to interact with stories by requesting more positive or more negative new stories. Users will also be able to assist the model by verifying if the recommendation is accurate - this will be used in future training to fine tune the models.
 
+# Architecture
+
+![Overview of News You Choose](images/Overview_News_You_Choose.png)
+
+![Overview of News You Choose Lambda](images/Detailed_View_News_You_Choose_Lambda.png)
+
 # ECR, Lambda and Deployments
 
 We are using ECR along with a lambda function to run some web scraping tasks for this project. Read a quick [tutorial on this here](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/).
