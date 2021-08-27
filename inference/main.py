@@ -135,15 +135,11 @@ def build_http_response(response_body, status_code=200):
 
 
 def handle_other_event(event, context):
-    response = None
-    if "text" in event:
-        response = predict_sentiment(
-            event["body"]["text"], *get_model_and_vectorizer())
+    event_body = json.loads(event["body"])
+    response = predict_sentiment(
+        event_body["text"], *get_model_and_vectorizer())
 
-    if response is not None:
-        return build_http_response(response)
-    else:
-        return build_http_response({"error": "No text provided"}, 400)
+    return build_http_response(response)
 
 
 def handler(event, context):
@@ -151,7 +147,7 @@ def handler(event, context):
     print(event)
     if "Records" in event:
         return handle_s3_event(event, context)
-    elif "text" in event["body"]:
+    elif "body" in event:
         return handle_other_event(event, context)
     else:
         return build_http_response({"error": "No event provided", "event": event}, 400)
