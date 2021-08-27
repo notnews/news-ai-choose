@@ -138,7 +138,7 @@ def handle_other_event(event, context):
     response = None
     if "text" in event:
         response = predict_sentiment(
-            event["text"], *get_model_and_vectorizer())
+            event["body"]["text"], *get_model_and_vectorizer())
 
     if response is not None:
         return build_http_response(response)
