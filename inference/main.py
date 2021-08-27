@@ -124,11 +124,13 @@ def build_http_response(response_body, status_code=200):
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Credentials": "true",
         "Access-Control-Allow-Methods": "POST",
-        "Access-Control-Allow-Headers": "Content-Type"
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Content-Type": "application/json"
     }
     res["headers"] = headers
     res["statusCode"] = status_code
     res["body"] = json.dumps(response_body)
+    res["isBase64Encoded"] = False
     return res
 
 
@@ -149,13 +151,10 @@ def handler(event, context):
     print(event)
     if "Records" in event:
         return handle_s3_event(event, context)
-    elif "text" in event:
+    elif "text" in event["body"]:
         return handle_other_event(event, context)
     else:
-        return {
-            "error": "invalid request",
-            "request": event
-        }
+        return build_http_response({"error": "No event provided", "event": event}, 400)
 
 
 if __name__ == "__main__":
