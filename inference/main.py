@@ -117,22 +117,40 @@ def handle_s3_event(event, context):
     }
 
 
+def build_http_response(response_body, status_code=200):
+    res = {}
+    # CORS Headers
+    headers = {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Methods": "POST",
+        "Access-Control-Allow-Headers": "Content-Type",
+        "Content-Type": "application/json"
+    }
+    res["headers"] = headers
+    res["statusCode"] = status_code
+    res["body"] = json.dumps(response_body)
+    res["isBase64Encoded"] = False
+    return res
+
+
 def handle_other_event(event, context):
-    if "text" in event:
-        return predict_sentiment(event["text"], *get_model_and_vectorizer())
+    event_body = json.loads(event["body"])
+    response = predict_sentiment(
+        event_body["text"], *get_model_and_vectorizer())
+
+    return build_http_response(response)
 
 
 def handler(event, context):
     """main function that handles http requests sent to the lambda func"""
+    print(event)
     if "Records" in event:
         return handle_s3_event(event, context)
-    elif "text" in event:
+    elif "body" in event:
         return handle_other_event(event, context)
     else:
-        return {
-            "error": "invalid request",
-            "request": event
-        }
+        return build_http_response({"error": "No event provided", "event": event}, 400)
 
 
 if __name__ == "__main__":
@@ -146,7 +164,7 @@ if __name__ == "__main__":
                             "name": "news-you-choose"
                         },
                         "object": {
-                            "key": "2021/08/21/fox.json"
+                            "key": "2021/08/23/fox.json"
                         }
                     }
                 }
