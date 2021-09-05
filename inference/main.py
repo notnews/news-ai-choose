@@ -15,7 +15,7 @@ from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
 
 MODEL = None
-VECTORIZER = None
+TOKENIZER = None
 ENGLISH_STOP_WORDS = None
 
 
@@ -38,13 +38,13 @@ def get_english_stop_words():
 def get_model_and_vectorizer():
     """Fetches the model and vectorizer pickle files. The vectorizer is too large for standard GitHub storage."""
     global MODEL
-    global VECTORIZER
-    if (MODEL is None) or (VECTORIZER is None):
+    global TOKENIZER
+    if (MODEL is None) or (TOKENIZER is None):
         MODEL = pickle.loads(fetch_s3_data("news-you-choose",
-                                           'model-files/lr_model.pkl'))  # model
-        VECTORIZER = pickle.loads(fetch_s3_data("news-you-choose",
-                                                'model-files/ngram_vectorizer.pkl'))  # vectorizer
-    return MODEL, VECTORIZER
+                                           'model-files/tf-model/sentiment_model_v2.h5'))  # model
+        TOKENIZER = pickle.loads(fetch_s3_data("news-you-choose",
+                                               'model-files/tf-model/tokenizer.pickle'))  # vectorizer
+    return MODEL, TOKENIZER
 
 
 def preprocess_text(review):
@@ -103,10 +103,10 @@ def handle_s3_event(event, context):
     s3_key = event["Records"][0]["s3"]["object"]["key"]
     s3_bucket = event["Records"][0]["s3"]["bucket"]["name"]
     articles = json.loads(fetch_s3_data(s3_bucket, s3_key))["data"]
-    MODEL, VECTORIZER = get_model_and_vectorizer()
+    MODEL, TOKENIZER = get_model_and_vectorizer()
     for article in articles:
         text = article["text"]
-        prediction = predict_sentiment(text, MODEL, VECTORIZER)
+        prediction = predict_sentiment(text, MODEL, TOKENIZER)
         insert_inferenced_record(article, prediction)
 
     return {
