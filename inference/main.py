@@ -1,21 +1,21 @@
 """
 * use pre-trained model to infer sentiment score from event
 """
-import re
-import nltk
 import pickle
 import json
 import boto3
 import os
-from nltk.corpus import stopwords
-import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.linear_model import LogisticRegression
+import tempfile
+from tensorflow import keras
+from keras.preprocessing.sequence import pad_sequences
+from keras.preprocessing.text import Tokenizer
+from keras.models import Sequential
+
 
 MODEL = None
-VECTORIZER = None
+TOKENIZER = None
 ENGLISH_STOP_WORDS = None
 
 
@@ -25,49 +25,40 @@ def fetch_s3_data(bucket_name, key_name):
     return s3.Object(bucket_name, key_name).get()['Body'].read()
 
 
-def get_english_stop_words():
-    global ENGLISH_STOP_WORDS
-    if ENGLISH_STOP_WORDS is None:
-        ENGLISH_STOP_WORDS = pickle.loads(
-            fetch_s3_data("news-you-choose",
-                          'model-files/english_stop_words.pkl')
-        )
-    return ENGLISH_STOP_WORDS
+def get_model():
+    """helper function to load the keras model weights
+    Keras expects a file object, not a bytestring"""
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        model_path = os.path.join(tmpdirname, "model.h5")
+        s3_model_data = fetch_s3_data(
+            "news-you-choose", "model-files/tf-model/sentiment_model_v2.h5")
+        with open(model_path, "wb") as f:
+            f.write(s3_model_data)
+        return keras.models.load_model(model_path)
 
 
 def get_model_and_vectorizer():
     """Fetches the model and vectorizer pickle files. The vectorizer is too large for standard GitHub storage."""
     global MODEL
-    global VECTORIZER
-    if (MODEL is None) or (VECTORIZER is None):
-        MODEL = pickle.loads(fetch_s3_data("news-you-choose",
-                                           'model-files/lr_model.pkl'))  # model
-        VECTORIZER = pickle.loads(fetch_s3_data("news-you-choose",
-                                                'model-files/ngram_vectorizer.pkl'))  # vectorizer
-    return MODEL, VECTORIZER
+    global TOKENIZER
+    if (MODEL is None) or (TOKENIZER is None):
+        MODEL = get_model()  # model
+        TOKENIZER = pickle.loads(fetch_s3_data("news-you-choose",
+                                               'model-files/tf-model/tokenizer.pickle'))  # vectorizer
+    return MODEL, TOKENIZER
 
 
-def preprocess_text(review):
-    REPLACE_NO_SPACE = re.compile("[.;:!\'?,\"()\[\]]")
-    REPLACE_WITH_SPACE = re.compile("(<br\s*/><br\s*/>)|(\-)|(\/)")
-    clean_text = REPLACE_NO_SPACE.sub("", review.lower())
-    clean_text = REPLACE_WITH_SPACE.sub(" ", clean_text)
-
-    return clean_text
-
-
-def remove_stop_words(review):
-    ENGLISH_STOP_WORDS = get_english_stop_words()
-    return ' '.join([word for word in review.split() if word not in ENGLISH_STOP_WORDS])
-
-
-def predict_sentiment(text, model, vectorizer):
-    text = preprocess_text(text)
-    text = remove_stop_words(text)
-    txt_vec = vectorizer.transform([text])
+def predict_sentiment(text: str, model: Sequential, tokenizer: Tokenizer):
+    text = tokenizer.texts_to_sequences([text])
+    text = pad_sequences(
+        text, maxlen=512, padding='pre', truncating='pre')
+    prediction = model.predict(text)
+    pred_sentiment = np.argmax(prediction, axis=-1)[0]
+    pred_text = ['NEGATIVE', 'NEUTRAL', 'POSITIVE'][pred_sentiment]
     return {
-        "sentiment": int(model.predict(txt_vec)[0]),
-        "probabilities": model.predict_proba(txt_vec).tolist()
+        "sentiment": int(pred_sentiment),
+        "probabilities": prediction.tolist()[0],
+        "sentiment_text": pred_text
     }
 
 
@@ -99,14 +90,13 @@ def insert_inferenced_record(article, prediction):
 
 def handle_s3_event(event, context):
     """Infer a score based on the text content and write to MySQL db"""
-    print(event)
     s3_key = event["Records"][0]["s3"]["object"]["key"]
     s3_bucket = event["Records"][0]["s3"]["bucket"]["name"]
     articles = json.loads(fetch_s3_data(s3_bucket, s3_key))["data"]
-    MODEL, VECTORIZER = get_model_and_vectorizer()
+    MODEL, TOKENIZER = get_model_and_vectorizer()
     for article in articles:
         text = article["text"]
-        prediction = predict_sentiment(text, MODEL, VECTORIZER)
+        prediction = predict_sentiment(text, MODEL, TOKENIZER)
         insert_inferenced_record(article, prediction)
 
     return {
@@ -135,9 +125,14 @@ def build_http_response(response_body, status_code=200):
 
 
 def handle_other_event(event, context):
-    event_body = json.loads(event["body"])
+    # workaround for local testing
+    try:
+        event_body = json.loads(event["body"])
+    except:
+        event_body = event["body"]
     response = predict_sentiment(
         event_body["text"], *get_model_and_vectorizer())
+    print(response)
 
     return build_http_response(response)
 
