@@ -7,9 +7,12 @@ import boto3
 import os
 import numpy as np
 from sqlalchemy import create_engine
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.linear_model import LogisticRegression
 import tempfile
+from tensorflow import keras
+from keras.preprocessing.sequence import pad_sequences
+from keras.preprocessing.text import Tokenizer
+from keras.models import Sequential
+
 
 MODEL = None
 TOKENIZER = None
@@ -45,13 +48,17 @@ def get_model_and_vectorizer():
     return MODEL, TOKENIZER
 
 
-def predict_sentiment(text, model, vectorizer):
-    text = preprocess_text(text)
-    text = remove_stop_words(text)
-    txt_vec = vectorizer.transform([text])
+def predict_sentiment(text: str, model: Sequential, tokenizer: Tokenizer):
+    text = tokenizer.texts_to_sequences([text])
+    text = pad_sequences(
+        text, maxlen=512, padding='pre', truncating='pre')
+    prediction = model.predict(text)
+    pred_sentiment = np.argmax(prediction, axis=-1)[0]
+    pred_text = ['NEGATIVE', 'NEUTRAL', 'POSITIVE'][pred_sentiment]
     return {
-        "sentiment": int(model.predict(txt_vec)[0]),
-        "probabilities": model.predict_proba(txt_vec).tolist()
+        "sentiment": int(pred_sentiment),
+        "probabilities": prediction.tolist()[0],
+        "sentiment_text": pred_text
     }
 
 
@@ -83,7 +90,6 @@ def insert_inferenced_record(article, prediction):
 
 def handle_s3_event(event, context):
     """Infer a score based on the text content and write to MySQL db"""
-    print(event)
     s3_key = event["Records"][0]["s3"]["object"]["key"]
     s3_bucket = event["Records"][0]["s3"]["bucket"]["name"]
     articles = json.loads(fetch_s3_data(s3_bucket, s3_key))["data"]
@@ -119,9 +125,14 @@ def build_http_response(response_body, status_code=200):
 
 
 def handle_other_event(event, context):
-    event_body = json.loads(event["body"])
+    # workaround for local testing
+    try:
+        event_body = json.loads(event["body"])
+    except:
+        event_body = event["body"]
     response = predict_sentiment(
         event_body["text"], *get_model_and_vectorizer())
+    print(response)
 
     return build_http_response(response)
 
