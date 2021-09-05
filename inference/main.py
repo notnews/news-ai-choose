@@ -1,18 +1,15 @@
 """
 * use pre-trained model to infer sentiment score from event
 """
-import re
-import nltk
 import pickle
 import json
 import boto3
 import os
-from nltk.corpus import stopwords
-import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
 from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.linear_model import LogisticRegression
+import tempfile
 
 MODEL = None
 TOKENIZER = None
@@ -25,13 +22,24 @@ def fetch_s3_data(bucket_name, key_name):
     return s3.Object(bucket_name, key_name).get()['Body'].read()
 
 
+def get_model():
+    """helper function to load the keras model weights
+    Keras expects a file object, not a bytestring"""
+    with tempfile.TemporaryDirectory() as tmpdirname:
+        model_path = os.path.join(tmpdirname, "model.h5")
+        s3_model_data = fetch_s3_data(
+            "news-you-choose", "model-files/tf-model/sentiment_model_v2.h5")
+        with open(model_path, "wb") as f:
+            f.write(s3_model_data)
+        return keras.models.load_model(model_path)
+
+
 def get_model_and_vectorizer():
     """Fetches the model and vectorizer pickle files. The vectorizer is too large for standard GitHub storage."""
     global MODEL
     global TOKENIZER
     if (MODEL is None) or (TOKENIZER is None):
-        MODEL = pickle.loads(fetch_s3_data("news-you-choose",
-                                           'model-files/tf-model/sentiment_model_v2.h5'))  # model
+        MODEL = get_model()  # model
         TOKENIZER = pickle.loads(fetch_s3_data("news-you-choose",
                                                'model-files/tf-model/tokenizer.pickle'))  # vectorizer
     return MODEL, TOKENIZER
