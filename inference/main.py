@@ -25,16 +25,6 @@ def fetch_s3_data(bucket_name, key_name):
     return s3.Object(bucket_name, key_name).get()['Body'].read()
 
 
-def get_english_stop_words():
-    global ENGLISH_STOP_WORDS
-    if ENGLISH_STOP_WORDS is None:
-        ENGLISH_STOP_WORDS = pickle.loads(
-            fetch_s3_data("news-you-choose",
-                          'model-files/english_stop_words.pkl')
-        )
-    return ENGLISH_STOP_WORDS
-
-
 def get_model_and_vectorizer():
     """Fetches the model and vectorizer pickle files. The vectorizer is too large for standard GitHub storage."""
     global MODEL
@@ -45,20 +35,6 @@ def get_model_and_vectorizer():
         TOKENIZER = pickle.loads(fetch_s3_data("news-you-choose",
                                                'model-files/tf-model/tokenizer.pickle'))  # vectorizer
     return MODEL, TOKENIZER
-
-
-def preprocess_text(review):
-    REPLACE_NO_SPACE = re.compile("[.;:!\'?,\"()\[\]]")
-    REPLACE_WITH_SPACE = re.compile("(<br\s*/><br\s*/>)|(\-)|(\/)")
-    clean_text = REPLACE_NO_SPACE.sub("", review.lower())
-    clean_text = REPLACE_WITH_SPACE.sub(" ", clean_text)
-
-    return clean_text
-
-
-def remove_stop_words(review):
-    ENGLISH_STOP_WORDS = get_english_stop_words()
-    return ' '.join([word for word in review.split() if word not in ENGLISH_STOP_WORDS])
 
 
 def predict_sentiment(text, model, vectorizer):
