@@ -82,8 +82,8 @@ def insert_inferenced_record(article, prediction):
             "INSERT INTO news (title, content, src, url, sentiment, score, user_approve, user_disapprove, date, image_url, json_response) "
             "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
             (article["title"], article["content"], article["src"],
-             article["url"], prediction["sentiment"], np.max(
-                 prediction["probabilities"][0]) * 100, 0, 0, article["date"], article["image_url"], json.dumps(prediction))
+             article["url"], prediction["sentiment"], max(
+                 prediction["probabilities"]) * 100, 0, 0, article["date"], article["image_url"], json.dumps(prediction))
         )
     return
 
