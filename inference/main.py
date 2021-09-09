@@ -95,7 +95,7 @@ def handle_s3_event(event, context):
     articles = json.loads(fetch_s3_data(s3_bucket, s3_key))["data"]
     MODEL, TOKENIZER = get_model_and_vectorizer()
     for article in articles:
-        text = article["text"]
+        text = article["title"]
         prediction = predict_sentiment(text, MODEL, TOKENIZER)
         insert_inferenced_record(article, prediction)
 
