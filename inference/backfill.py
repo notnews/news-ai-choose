@@ -23,11 +23,12 @@ def create_s3_event(date_string: str, news_source: str, bucket_name: str) -> dic
 
 
 if __name__ == "__main__":
-    DAYS_TO_BACKILL = 17
+    DAYS_TO_BACKILL = 1
 
     news_sources = ["fox", "cnn", "nytimes"]
     base = datetime.datetime.today()
-    date_list = [base - datetime.timedelta(days=x) for x in range(17)]
+    date_list = [base - datetime.timedelta(days=x)
+                 for x in range(DAYS_TO_BACKILL)]
     dates_complete = []
 
     if MYSQL_CONN is None:
