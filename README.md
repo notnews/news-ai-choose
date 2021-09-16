@@ -10,6 +10,8 @@ The goal of New A.I. Choose is to train machine learning models to accurately pr
 
 ![Overview of News You Choose Database](images/Database_ERD.png)
 
+![Overview of News You Choose Model](images/Detailed_View_Model_Structure.jpg)
+
 # ECR, Lambda and Deployments
 
 We are using ECR along with a lambda function to run some web scraping tasks for this project. Read a quick [tutorial on this here](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/).
